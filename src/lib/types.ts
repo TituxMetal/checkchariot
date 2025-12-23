@@ -4,16 +4,32 @@ export type InspectionStatus = 'ok' | 'minor' | 'critical'
 
 export type MaintenanceActionStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
 
+export interface Equipment {
+  id: string
+  name: string
+  type: ForkliftType
+}
+
+export interface AnswerChoice {
+  id: string
+  text: string
+  isCorrect: boolean
+  severity?: 'minor' | 'critical'
+}
+
 export interface InspectionQuestion {
   id: string
   text: string
   categories: ForkliftType[]
+  choices: AnswerChoice[]
 }
 
 export interface InspectionAnswer {
   questionId: string
   questionText: string
-  answer: boolean
+  selectedChoiceId: string
+  selectedChoiceText: string
+  isCorrect: boolean
   comment?: string
   severity?: 'minor' | 'critical'
 }

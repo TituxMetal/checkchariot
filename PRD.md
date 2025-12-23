@@ -1,37 +1,37 @@
-# CheckChariot - Pre-Shift Forklift Inspection System
+# CheckChariot v2 - Pre-Shift Forklift Inspection System
 
-A professional daily pre-shift inspection application enabling forklift operators to perform rapid safety checks and supervisors to monitor fleet compliance and maintenance status.
+A professional daily pre-shift inspection application enabling forklift operators to perform safety checks with contextual multi-choice questions in French, preventing autopilot responses while providing supervisors with comprehensive fleet compliance monitoring.
 
 **Experience Qualities**:
-1. **Efficient** - Operators complete inspections in under 2 minutes with intuitive yes/no flows and minimal friction
-2. **Trustworthy** - Clear visual hierarchy and professional industrial design inspire confidence in safety-critical workflows
+1. **Engaging** - Randomized answer positions and contextual choices require active attention, preventing checklist fatigue
+2. **Professional** - French-language interface with industrial design inspires confidence in safety-critical workflows
 3. **Transparent** - Real-time fleet status visibility gives supervisors instant awareness of equipment readiness
 
 **Complexity Level**: Light Application (multiple features with basic state)
-This is a focused workflow application with distinct operator and supervisor modes, persistent inspection data, and straightforward CRUD operations without complex business logic or external integrations.
+A focused workflow application with distinct operator and supervisor modes, persistent inspection data, contextual multi-choice questions with randomization logic, and straightforward CRUD operations without complex business logic or external integrations.
 
 ## Essential Features
 
 ### Equipment Selection
-- **Functionality**: Operator selects forklift category (CACES 1, 3, or 5) and enters/selects unit ID before inspection
-- **Purpose**: Ensures inspection data is properly attributed to specific equipment
+- **Functionality**: Operator selects specific forklift from predefined list grouped by category (CACES 1, 3, or 5), each with unique ID and name
+- **Purpose**: Ensures inspection data is properly attributed to specific equipment from known fleet inventory
 - **Trigger**: App launch or "Start New Inspection" button
-- **Progression**: Landing screen → Category selection (3 large cards) → Unit ID input/selection → Begin inspection
-- **Success criteria**: Selected equipment type and ID are stored with inspection record; cannot proceed without both values
+- **Progression**: Landing screen → Category tabs/accordion (CACES 1/3/5) → Select specific equipment from list within category → Begin inspection
+- **Success criteria**: Selected equipment stored with inspection record; equipment list shows ID and name; cannot proceed without selection
 
-### Randomized Inspection Quiz
-- **Functionality**: Presents 8-10 yes/no safety questions mixing universal checks with category-specific items
-- **Purpose**: Maintains inspection variety to prevent checklist fatigue while ensuring critical components are checked
+### Randomized Contextual Inspection Quiz
+- **Functionality**: Presents 6-8 safety questions in French with 2-4 contextual answer choices per question; answer button positions randomized each time
+- **Purpose**: Prevents autopilot clicking through active engagement; ensures operators read and understand each question
 - **Trigger**: After equipment selection is confirmed
-- **Progression**: Question display with large Yes/No buttons → Auto-advance on "Yes" → Comment field appears on "No" → Progress indicator → Final submission
-- **Success criteria**: All questions answered; at least 3-4 category-specific questions included; no duplicate questions in single inspection
+- **Progression**: French question display → 2-4 answer buttons in random positions → Select answer → If problem answer: comment field appears → Progress indicator → Final submission
+- **Success criteria**: All questions in French; answer positions different each load; mix of common and category-specific questions; exactly one correct answer per question
 
 ### Defect Reporting
-- **Functionality**: When operator selects "No", comment field and severity selector appear for issue documentation
-- **Purpose**: Captures actionable maintenance information and enables prioritization
-- **Trigger**: "No" answer on any inspection question
-- **Progression**: "No" tapped → Comment textarea slides in → Operator types description → Optional severity toggle (Minor/Critical) → Continue to next question
-- **Success criteria**: All defects have text descriptions; severity defaults to "needs attention" if not explicitly marked critical
+- **Functionality**: When operator selects a problem answer (not the correct/OK answer), comment field appears for issue documentation
+- **Purpose**: Captures actionable maintenance information when issues are detected
+- **Trigger**: Problem answer selected on any inspection question
+- **Progression**: Problem answer tapped → Comment textarea slides in → Operator types description in French → Continue to next question
+- **Success criteria**: All problem answers trigger comment field; comments stored with answers; field validates before allowing continue
 
 ### Supervisor Dashboard
 - **Functionality**: Overview showing today's inspection count, defect summary, equipment status grid, and filterable history
