@@ -1,390 +1,225 @@
-import { useMemo, useState } from 'react'
-import { Inspection, EquipmentStatus, InspectionStatus } from '@/lib/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useMemo } from 'react'
+import { Inspection } from '@/lib/types'
+import { EQUIPMENT_LIST } from '@/lib/equipment'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import {
-  ClipboardText,
-  CheckCircle,
-  Warning,
-  XCircle,
-  Truck,
-  Calendar,
-  Eye
-} from '@phosphor-icons/react'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { CheckCircle, Warning, XCircle, ClipboardText } from '@phosphor-icons/react'
+import { format, isToday, isThisWeek, isThisMonth, startOfDay } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
-interface SupervisorDashboardProps {
+interface Props {
   inspections: Inspection[]
 }
 
-export function SupervisorDashboard({ inspections }: SupervisorDashboardProps) {
-  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null)
-  
+export function SupervisorDashboard({ inspections }: Props) {
+  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('today')
+
+  const filteredInspections = useMemo(() => {
+    return inspections.filter(inspection => {
+      const inspectionDate = new Date(inspection.timestamp)
+      if (selectedPeriod === 'today') return isToday(inspectionDate)
+      if (selectedPeriod === 'week') return isThisWeek(inspectionDate, { locale: fr })
+      if (selectedPeriod === 'month') return isThisMonth(inspectionDate)
+      return false
+    })
+  }, [inspections, selectedPeriod])
+
   const stats = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayTimestamp = today.getTime()
+    const total = filteredInspections.length
+    const ok = filteredInspections.filter(i => i.status === 'ok').length
+    const warning = filteredInspections.filter(i => i.status === 'warning').length
+    const critical = filteredInspections.filter(i => i.status === 'critical').length
+    
+    return { total, ok, warning, critical }
+  }, [filteredInspections])
 
-    const todayInspections = inspections.filter(i => i.timestamp >= todayTimestamp)
+  const equipmentStatus = useMemo(() => {
+    const statusMap = new Map<string, { equipment: typeof EQUIPMENT_LIST[0], latestInspection: Inspection | null }>()
+    
+    EQUIPMENT_LIST.forEach(eq => {
+      statusMap.set(eq.id, { equipment: eq, latestInspection: null })
+    })
 
-    const totalToday = todayInspections.length
-    const withDefects = todayInspections.filter(i => i.status !== 'ok').length
-    const critical = todayInspections.filter(i => i.status === 'critical').length
-
-    const equipmentMap = new Map<string, EquipmentStatus>()
-    inspections.forEach(inspection => {
-      const key = `${inspection.equipmentType}-${inspection.unitId}`
-      const existing = equipmentMap.get(key)
-      if (!existing || inspection.timestamp > existing.lastInspection!.timestamp) {
-        equipmentMap.set(key, {
-          unitId: inspection.unitId,
-          type: inspection.equipmentType,
-          lastInspection: inspection,
-          status: inspection.status
-        })
+    const todayInspections = inspections.filter(i => isToday(new Date(i.timestamp)))
+    
+    todayInspections.forEach(inspection => {
+      const current = statusMap.get(inspection.equipmentId)
+      if (current) {
+        if (!current.latestInspection || inspection.timestamp > current.latestInspection.timestamp) {
+          current.latestInspection = inspection
+        }
       }
     })
 
-    const equipment = Array.from(equipmentMap.values())
-
-    return {
-      totalToday,
-      withDefects,
-      critical,
-      equipment
-    }
+    return Array.from(statusMap.values())
   }, [inspections])
 
-  const getStatusColor = (status: InspectionStatus) => {
-    switch (status) {
-      case 'ok':
-        return 'text-success'
-      case 'minor':
-        return 'text-warning'
-      case 'critical':
-        return 'text-destructive'
-    }
+  const getStatusColor = (status: Inspection['status']) => {
+    if (status === 'ok') return 'text-success'
+    if (status === 'warning') return 'text-warning'
+    return 'text-destructive'
   }
 
-  const getStatusBg = (status: InspectionStatus) => {
-    switch (status) {
-      case 'ok':
-        return 'border-l-success'
-      case 'minor':
-        return 'border-l-warning'
-      case 'critical':
-        return 'border-l-destructive'
-    }
+  const getStatusIcon = (status: Inspection['status']) => {
+    if (status === 'ok') return <CheckCircle weight="fill" className={getStatusColor(status)} />
+    if (status === 'warning') return <Warning weight="fill" className={getStatusColor(status)} />
+    return <XCircle weight="fill" className={getStatusColor(status)} />
   }
 
-  const getTimeAgo = (timestamp: number) => {
-    const hours = Math.floor((Date.now() - timestamp) / (1000 * 60 * 60))
-    if (hours < 1) {
-      const minutes = Math.floor((Date.now() - timestamp) / (1000 * 60))
-      return `${minutes}m ago`
+  const getEquipmentStatusBadge = (latestInspection: Inspection | null) => {
+    if (!latestInspection) {
+      return <Badge variant="outline">Non inspecté</Badge>
     }
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
+    if (latestInspection.status === 'ok') {
+      return <Badge className="bg-success text-success-foreground">Opérationnel</Badge>
+    }
+    if (latestInspection.status === 'warning') {
+      return <Badge className="bg-warning text-warning-foreground">Attention</Badge>
+    }
+    return <Badge variant="destructive">Hors service</Badge>
   }
-
-  const sortedInspections = [...inspections].sort((a, b) => b.timestamp - a.timestamp)
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Supervisor Dashboard</h1>
-          <p className="text-muted-foreground">Fleet inspection status and history</p>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-2">Tableau de bord superviseur</h2>
+          <p className="text-muted-foreground">
+            Vue d'ensemble des inspections et de l'état de la flotte
+          </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Today's Inspections
-              </CardTitle>
-              <ClipboardText size={20} className="text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalToday}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total inspections completed
-              </p>
-            </CardContent>
-          </Card>
+        <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as typeof selectedPeriod)}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
+            <TabsTrigger value="week">Cette semaine</TabsTrigger>
+            <TabsTrigger value="month">Ce mois</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Defects Reported
-              </CardTitle>
-              <Warning size={20} className="text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-warning">{stats.withDefects}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Equipment needing attention
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Critical Issues
-              </CardTitle>
-              <XCircle size={20} className="text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-destructive">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Out of service equipment
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck size={24} />
-              Fleet Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.equipment.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <ClipboardText size={48} className="mx-auto mb-4 opacity-50" />
-                <p>No equipment has been inspected yet</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <ClipboardText className="text-muted-foreground" size={20} />
               </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {stats.equipment.map((eq, idx) => (
+              <div className="text-3xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground mt-1">Inspections réalisées</p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">OK</span>
+                <CheckCircle className="text-success" size={20} weight="fill" />
+              </div>
+              <div className="text-3xl font-bold text-success">{stats.ok}</div>
+              <p className="text-xs text-muted-foreground mt-1">Équipements opérationnels</p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Attention</span>
+                <Warning className="text-warning" size={20} weight="fill" />
+              </div>
+              <div className="text-3xl font-bold text-warning">{stats.warning}</div>
+              <p className="text-xs text-muted-foreground mt-1">Défauts mineurs</p>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Critique</span>
+                <XCircle className="text-destructive" size={20} weight="fill" />
+              </div>
+              <div className="text-3xl font-bold text-destructive">{stats.critical}</div>
+              <p className="text-xs text-muted-foreground mt-1">Hors service</p>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">État de la flotte (aujourd'hui)</h3>
+              <div className="space-y-2">
+                {equipmentStatus.map(({ equipment, latestInspection }) => (
                   <div
-                    key={idx}
-                    className={`p-4 rounded-lg border-l-4 bg-card ${getStatusBg(
-                      eq.status
-                    )}`}
+                    key={equipment.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="font-mono font-semibold text-lg">
-                          {eq.unitId}
-                        </div>
-                        <Badge variant="secondary" className="text-xs mt-1">
-                          {eq.type}
-                        </Badge>
-                      </div>
-                      {eq.status === 'ok' ? (
-                        <CheckCircle size={24} weight="fill" className="text-success" />
-                      ) : eq.status === 'critical' ? (
-                        <XCircle size={24} weight="fill" className="text-destructive" />
-                      ) : (
-                        <Warning size={24} weight="fill" className="text-warning" />
-                      )}
+                    <div className="flex-1">
+                      <div className="font-medium">{equipment.name}</div>
+                      <div className="text-xs font-mono text-muted-foreground">{equipment.id}</div>
                     </div>
-                    {eq.lastInspection && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar size={12} />
-                        {getTimeAgo(eq.lastInspection.timestamp)}
-                      </div>
-                    )}
+                    <div>
+                      {getEquipmentStatusBadge(latestInspection)}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Inspections</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sortedInspections.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <ClipboardText size={48} className="mx-auto mb-4 opacity-50" />
-                <p>No inspections recorded yet</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Unit ID</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Operator</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Defects</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedInspections.slice(0, 20).map((inspection) => {
-                      const defectCount = inspection.answers.filter(a => !a.answer).length
-                      return (
-                        <TableRow key={inspection.id}>
-                          <TableCell className="font-mono font-medium">
-                            {inspection.unitId}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-xs">
-                              {inspection.equipmentType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{inspection.operatorName}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(inspection.timestamp).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={inspection.status === 'ok' ? 'outline' : 'destructive'}
-                              className={`${
-                                inspection.status === 'ok'
-                                  ? 'border-success text-success'
-                                  : inspection.status === 'minor'
-                                  ? 'bg-warning text-warning-foreground'
-                                  : ''
-                              }`}
-                            >
-                              {inspection.status === 'ok'
-                                ? 'OK'
-                                : inspection.status === 'critical'
-                                ? 'Critical'
-                                : 'Minor Issues'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {defectCount > 0 ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setSelectedInspection(inspection)}
-                                  >
-                                    <Eye size={16} className="mr-1" />
-                                    <span className={getStatusColor(inspection.status)}>
-                                      {defectCount}
-                                    </span>
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl">
-                                  <DialogHeader>
-                                    <DialogTitle>Inspection Details - {inspection.unitId}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4 py-4">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <div className="text-muted-foreground mb-1">Equipment Type</div>
-                                        <Badge variant="secondary">{inspection.equipmentType}</Badge>
-                                      </div>
-                                      <div>
-                                        <div className="text-muted-foreground mb-1">Operator</div>
-                                        <div>{inspection.operatorName}</div>
-                                      </div>
-                                      <div>
-                                        <div className="text-muted-foreground mb-1">Timestamp</div>
-                                        <div>
-                                          {new Date(inspection.timestamp).toLocaleString('en-US', {
-                                            dateStyle: 'medium',
-                                            timeStyle: 'short'
-                                          })}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="text-muted-foreground mb-1">Status</div>
-                                        <Badge
-                                          variant={inspection.status === 'ok' ? 'outline' : 'destructive'}
-                                          className={`${
-                                            inspection.status === 'ok'
-                                              ? 'border-success text-success'
-                                              : inspection.status === 'minor'
-                                              ? 'bg-warning text-warning-foreground'
-                                              : ''
-                                          }`}
-                                        >
-                                          {inspection.status === 'ok'
-                                            ? 'OK'
-                                            : inspection.status === 'critical'
-                                            ? 'Critical'
-                                            : 'Minor Issues'}
-                                        </Badge>
-                                      </div>
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">Historique des inspections</h3>
+              <div className="space-y-2">
+                {filteredInspections.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Aucune inspection pour cette période
+                  </p>
+                ) : (
+                  <Accordion type="single" collapsible className="space-y-2">
+                    {filteredInspections.map((inspection) => (
+                      <AccordionItem key={inspection.id} value={inspection.id} className="border rounded-lg px-4">
+                        <AccordionTrigger className="hover:no-underline py-3">
+                          <div className="flex items-center gap-3 flex-1 text-left">
+                            <div className="shrink-0">
+                              {getStatusIcon(inspection.status)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{inspection.equipmentName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {format(inspection.timestamp, 'PPp', { locale: fr })}
+                              </div>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                          <div className="space-y-3 pt-2">
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Opérateur:</span>
+                                <p className="font-medium">{inspection.operatorName}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">ID:</span>
+                                <p className="font-mono text-xs">{inspection.equipmentId}</p>
+                              </div>
+                            </div>
+                            
+                            {inspection.responses.filter(r => !r.isOk).length > 0 && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">Défauts signalés:</p>
+                                <div className="space-y-2">
+                                  {inspection.responses.filter(r => !r.isOk).map((response, idx) => (
+                                    <div key={idx} className="text-sm bg-muted/50 rounded p-2">
+                                      <p className="font-medium">{response.questionText}</p>
+                                      <p className="text-muted-foreground text-xs">{response.answerText}</p>
+                                      {response.comment && (
+                                        <p className="text-xs italic mt-1">"{response.comment}"</p>
+                                      )}
                                     </div>
-                                    <div className="space-y-3">
-                                      <h4 className="font-semibold">Defects Found</h4>
-                                      <div className="space-y-2">
-                                        {inspection.answers
-                                          .filter(a => !a.answer)
-                                          .map((defect, idx) => (
-                                            <div
-                                              key={idx}
-                                              className={`p-3 rounded-lg border-l-4 ${
-                                                defect.severity === 'critical'
-                                                  ? 'border-l-destructive bg-destructive/5'
-                                                  : 'border-l-warning bg-warning/5'
-                                              }`}
-                                            >
-                                              <div className="flex items-start justify-between gap-2 mb-1">
-                                                <div className="text-sm font-medium flex-1">
-                                                  {defect.questionText}
-                                                </div>
-                                                <Badge
-                                                  variant={defect.severity === 'critical' ? 'destructive' : 'outline'}
-                                                  className={`text-xs ${
-                                                    defect.severity === 'minor' ? 'border-warning text-warning' : ''
-                                                  }`}
-                                                >
-                                                  {defect.severity === 'critical' ? 'Critical' : 'Minor'}
-                                                </Badge>
-                                              </div>
-                                              {defect.comment && (
-                                                <div className="text-sm text-muted-foreground">
-                                                  {defect.comment}
-                                                </div>
-                                              )}
-                                            </div>
-                                          ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
+                                  ))}
+                                </div>
+                              </div>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </Card>
+          </div>
+        </Tabs>
       </div>
     </div>
   )

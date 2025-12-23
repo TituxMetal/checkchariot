@@ -1,22 +1,28 @@
-import { Equipment, ForkliftType } from './types'
+import { Equipment, CACESCategory } from './types'
 
 export const EQUIPMENT_LIST: Equipment[] = [
-  { id: 'FL-001', name: 'Chariot élévateur A', type: 'CACES-1' },
-  { id: 'FL-002', name: 'Chariot élévateur B', type: 'CACES-1' },
-  { id: 'FL-003', name: 'Chariot élévateur C', type: 'CACES-1' },
-  { id: 'FL-004', name: 'Chariot élévateur D', type: 'CACES-1' },
-  { id: 'RT-001', name: 'Gerbeur à mât rétractable Alpha', type: 'CACES-3' },
-  { id: 'RT-002', name: 'Gerbeur à mât rétractable Beta', type: 'CACES-3' },
-  { id: 'RT-003', name: 'Chariot télescopique Gamma', type: 'CACES-3' },
-  { id: 'OP-001', name: 'Préparateur de commandes Omega', type: 'CACES-5' },
-  { id: 'OP-002', name: 'Préparateur de commandes Delta', type: 'CACES-5' },
-  { id: 'OP-003', name: 'Nacelle élévatrice Sigma', type: 'CACES-5' }
+  { id: 'C1-001', name: 'Clark C25', category: 'CACES1' },
+  { id: 'C1-002', name: 'Toyota 8FG25', category: 'CACES1' },
+  { id: 'C1-003', name: 'Linde H20T', category: 'CACES1' },
+  { id: 'C1-004', name: 'Hyster J2.0XN', category: 'CACES1' },
+  { id: 'C3-101', name: 'BT RRE160', category: 'CACES3' },
+  { id: 'C3-102', name: 'Crown RR5700', category: 'CACES3' },
+  { id: 'C3-103', name: 'Linde L16', category: 'CACES3' },
+  { id: 'C5-201', name: 'Linde R14', category: 'CACES5' },
+  { id: 'C5-202', name: 'Still FM-X20', category: 'CACES5' },
+  { id: 'C5-203', name: 'Crown ESR5000', category: 'CACES5' },
 ]
 
-export function getEquipmentByType(type: ForkliftType): Equipment[] {
-  return EQUIPMENT_LIST.filter(eq => eq.type === type)
+export function getEquipmentByCategory(category: CACESCategory): Equipment[] {
+  return EQUIPMENT_LIST.filter(eq => eq.category === category)
 }
 
 export function getEquipmentById(id: string): Equipment | undefined {
   return EQUIPMENT_LIST.find(eq => eq.id === id)
+}
+
+export const CATEGORY_LABELS: Record<CACESCategory, string> = {
+  CACES1: 'CACES 1 - Transpalettes à conducteur porté',
+  CACES3: 'CACES 3 - Chariots élévateurs en porte-à-faux',
+  CACES5: 'CACES 5 - Chariots élévateurs à mât rétractable'
 }

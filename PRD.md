@@ -1,179 +1,148 @@
-# CheckChariot v2 - Pre-Shift Forklift Inspection System
+# CheckChariot v2 - Product Requirements Document
 
-A professional daily pre-shift inspection application enabling forklift operators to perform safety checks with contextual multi-choice questions in French, preventing autopilot responses while providing supervisors with comprehensive fleet compliance monitoring.
+CheckChariot v2 est une application d'inspection quotidienne avant prise de poste pour chariots élévateurs (CACES 1, 3, 5). Les opérateurs sélectionnent leur équipement et répondent à des questions de sécurité contextuelles avec des positions de boutons randomisées pour éviter le "mode pilote automatique".
 
 **Experience Qualities**:
-1. **Engaging** - Randomized answer positions and contextual choices require active attention, preventing checklist fatigue
-2. **Professional** - French-language interface with industrial design inspires confidence in safety-critical workflows
-3. **Transparent** - Real-time fleet status visibility gives supervisors instant awareness of equipment readiness
+1. **Professionnel** - Interface sérieuse et claire qui inspire confiance pour des tâches de sécurité critiques
+2. **Intuitif** - Navigation simple et directe, adaptée aux environnements industriels avec gants
+3. **Vigilant** - Randomisation des réponses pour maintenir l'attention des opérateurs lors des inspections répétitives
 
 **Complexity Level**: Light Application (multiple features with basic state)
-A focused workflow application with distinct operator and supervisor modes, persistent inspection data, contextual multi-choice questions with randomization logic, and straightforward CRUD operations without complex business logic or external integrations.
+This is a focused safety inspection tool with equipment selection, randomized quiz flow, defect reporting, and supervisor dashboard. It manages inspection state and history but doesn't require complex multi-view navigation or advanced business logic.
 
 ## Essential Features
 
-### Equipment Selection
-- **Functionality**: Operator selects specific forklift from predefined list grouped by category (CACES 1, 3, or 5), each with unique ID and name
-- **Purpose**: Ensures inspection data is properly attributed to specific equipment from known fleet inventory
-- **Trigger**: App launch or "Start New Inspection" button
-- **Progression**: Landing screen → Category tabs/accordion (CACES 1/3/5) → Select specific equipment from list within category → Begin inspection
-- **Success criteria**: Selected equipment stored with inspection record; equipment list shows ID and name; cannot proceed without selection
+**Equipment Selection**
+- Functionality: Display categorized list of forklifts (CACES 1/3/5) with unique ID and friendly name
+- Purpose: Allow operators to quickly identify and select their assigned equipment
+- Trigger: App launch or "New Inspection" action
+- Progression: Launch → View categorized list → Tap equipment card → Confirm selection → Start inspection
+- Success criteria: Equipment selected, inspection session initialized with correct category
 
-### Randomized Contextual Inspection Quiz
-- **Functionality**: Presents 6-8 safety questions in French with 2-4 contextual answer choices per question; answer button positions randomized each time
-- **Purpose**: Prevents autopilot clicking through active engagement; ensures operators read and understand each question
-- **Trigger**: After equipment selection is confirmed
-- **Progression**: French question display → 2-4 answer buttons in random positions → Select answer → If problem answer: comment field appears → Progress indicator → Final submission
-- **Success criteria**: All questions in French; answer positions different each load; mix of common and category-specific questions; exactly one correct answer per question
+**Randomized Inspection Quiz**
+- Functionality: Present 6-8 safety questions in French with 2-4 contextual answers per question, buttons in random positions
+- Purpose: Ensure thorough pre-shift safety checks while preventing autopilot behavior
+- Trigger: After equipment selection
+- Progression: Question 1 → Select answer from randomized positions → (If problem: add comment) → Next question → Repeat → Complete inspection
+- Success criteria: All questions answered, defects properly logged, inspection recorded with timestamp
 
-### Defect Reporting
-- **Functionality**: When operator selects a problem answer (not the correct/OK answer), comment field appears for issue documentation
-- **Purpose**: Captures actionable maintenance information when issues are detected
-- **Trigger**: Problem answer selected on any inspection question
-- **Progression**: Problem answer tapped → Comment textarea slides in → Operator types description in French → Continue to next question
-- **Success criteria**: All problem answers trigger comment field; comments stored with answers; field validates before allowing continue
+**Defect Reporting**
+- Functionality: When problematic answer selected, show comment field for details
+- Purpose: Capture specific defect information for maintenance action
+- Trigger: Selection of non-OK answer
+- Progression: Select problem answer → Comment field slides in → Type description → Continue to next question
+- Success criteria: Defect comments saved with answer, supervisor/maintenance notified
 
-### Supervisor Dashboard
-- **Functionality**: Overview showing today's inspection count, defect summary, equipment status grid, and filterable history
-- **Purpose**: Enables supervisors to monitor compliance and identify equipment requiring maintenance
-- **Trigger**: Supervisor mode toggle or dedicated route
-- **Progression**: Dashboard loads → Summary cards (inspections today, defects, compliance %) → Fleet status grid (color-coded) → Inspection history table (filterable by date/equipment/status)
-- **Success criteria**: Data updates after each submitted inspection; defects are prominently highlighted; can filter history by date range and equipment
+**Supervisor Dashboard**
+- Functionality: Overview of today's inspections, defect alerts, weekly/monthly trends, fleet status
+- Purpose: Monitor fleet safety compliance and identify equipment issues
+- Trigger: Supervisor mode tab selection
+- Progression: Open supervisor view → See today's summary → Filter by equipment/date/status → Drill into specific inspection → View details
+- Success criteria: All inspections visible, defects highlighted, historical data accessible
 
-### Fleet Status Visualization
-- **Functionality**: Equipment grid showing each unit's current operational status with color coding
-- **Purpose**: Instant visual awareness of which equipment is ready for operation
-- **Trigger**: Displayed automatically in supervisor dashboard
-- **Progression**: Grid layout → Equipment cards show ID, type, last inspection time, status → Click card to view inspection details and defect history
-- **Success criteria**: Status accurately reflects latest inspection; green (all OK), orange (minor issues), red (critical defects); timestamp shows hours since last check
-
-### Maintenance Action Tracking
-- **Functionality**: Automatic creation of maintenance actions from inspection defects with status tracking (pending, in-progress, completed, cancelled)
-- **Purpose**: Close the loop between defect identification and resolution; ensure all issues are tracked to completion
-- **Trigger**: Created automatically when inspection contains defects; supervisors manage from dedicated Maintenance tab
-- **Progression**: Defect reported → Maintenance action created (pending) → Supervisor assigns to technician and starts work (in-progress) → Technician completes with resolution notes (completed)
-- **Success criteria**: Each defect generates a trackable action; supervisors can filter by status; resolution notes are required for completion; critical issues are visually prioritized
-
-### Resolution Status Management
-- **Functionality**: Supervisors and maintenance staff can update action status, assign work, and document resolutions
-- **Purpose**: Enable accountability and tracking of maintenance work completion
-- **Trigger**: Supervisor clicks on maintenance action in Maintenance tab
-- **Progression**: View pending action → Assign to technician and start → Work in progress → Complete with resolution notes → Resolution logged with timestamp and user
-- **Success criteria**: Status changes persist; resolution notes include what was done; completed actions show who resolved and when; can view resolution history
+**Fleet Status Overview**
+- Functionality: Visual status indicators (green/orange/red) for each piece of equipment
+- Purpose: Quick identification of equipment availability and issues
+- Trigger: Visible in supervisor dashboard
+- Progression: View fleet grid → See color-coded status → Identify problematic equipment → Drill into details
+- Success criteria: Status accurately reflects latest inspection, color coding clear and consistent
 
 ## Edge Case Handling
 
-- **No Inspections Yet**: Dashboard shows empty state with helpful prompt to start first inspection
-- **No Maintenance Actions**: Maintenance tab shows empty state when no defects have been reported
-- **Incomplete Inspection**: "Save as Draft" option if operator needs to pause mid-inspection; draft accessible from landing page
-- **Duplicate Inspection**: Warn if same equipment was already inspected today; allow override with reason
-- **Missing Unit ID**: Validation prevents proceeding without valid equipment identifier
-- **Network Issues**: Inspections save to local storage and sync when connection restored
-- **Very Old Equipment**: Show warning if equipment hasn't been inspected in 48+ hours
-- **Completing Without Resolution Notes**: Prevent completing maintenance actions without resolution description
-- **Critical Items in Pending State**: Visually prioritize critical severity items in maintenance queue
+- **Duplicate Inspection**: If equipment already inspected today, show warning with previous inspection time and allow override
+- **Incomplete Inspection**: If operator navigates away mid-inspection, show confirmation dialog to prevent data loss
+- **No Equipment Available**: Display helpful message if equipment list is empty with supervisor contact info
+- **Offline Mode**: Questions and equipment list work offline; sync inspections when connection restored
+- **Missing Comment on Defect**: Require comment field for critical defects before allowing progression
 
 ## Design Direction
 
-The design should evoke **industrial professionalism with safety-first clarity**. This is a tool used in active warehouses and loading docks—it must feel robust, authoritative, and purpose-built. Think control panels, construction sites, and professional-grade tools. High contrast for glanceability in various lighting conditions, generous touch targets for gloved hands, and zero ambiguity in status communication.
+The design should evoke **industrial reliability** and **safety-first professionalism**. Think heavy machinery control panels - clear, high-contrast, purposeful. The interface must feel robust and trustworthy, appropriate for warehouse environments where operators may be wearing gloves or working in challenging lighting conditions. Dark theme reduces eye strain during early morning shifts.
 
 ## Color Selection
 
-A sophisticated dark industrial palette with high-contrast safety colors for status communication.
+A professional industrial palette with clear safety color coding.
 
-- **Primary Color**: Deep slate blue `oklch(0.35 0.04 250)` - Professional and authoritative without being harsh; used for primary actions and headers
+- **Primary Color**: Deep Slate Blue `oklch(0.35 0.04 250)` - Conveys professionalism and calm authority, used for primary actions and headers
 - **Secondary Colors**: 
-  - Warm charcoal `oklch(0.25 0.01 280)` for backgrounds and cards
-  - Cool steel gray `oklch(0.45 0.02 260)` for secondary elements and borders
-- **Accent Color**: Vibrant amber `oklch(0.75 0.15 75)` - High-visibility warning color for "needs attention" states and CTAs
+  - Medium Slate `oklch(0.45 0.02 260)` for secondary buttons and less prominent UI elements
+  - Card backgrounds `oklch(0.30 0.015 275)` for content containers that feel substantial
+- **Accent Color**: Bright Yellow-Green `oklch(0.75 0.15 75)` - High-visibility alert color for attention-grabbing CTAs and important information
 - **Status Colors**:
-  - Success green `oklch(0.65 0.18 145)` for operational/all clear
-  - Alert orange `oklch(0.70 0.17 60)` for minor issues/attention needed
-  - Critical red `oklch(0.60 0.22 25)` for out of service/critical defects
+  - Success/OK: Vibrant Green `oklch(0.65 0.18 145)` - Equipment cleared for operation
+  - Warning: Warm Yellow `oklch(0.70 0.17 60)` - Minor issues, report to supervisor
+  - Critical: Bold Red `oklch(0.60 0.22 25)` - Equipment out of service
 - **Foreground/Background Pairings**:
-  - Primary slate `oklch(0.35 0.04 250)`: White text `oklch(0.98 0 0)` - Ratio 8.2:1 ✓
-  - Background charcoal `oklch(0.25 0.01 280)`: Light gray text `oklch(0.85 0.01 260)` - Ratio 7.4:1 ✓
-  - Accent amber `oklch(0.75 0.15 75)`: Dark text `oklch(0.20 0.02 280)` - Ratio 8.9:1 ✓
-  - Success green `oklch(0.65 0.18 145)`: White text `oklch(0.98 0 0)` - Ratio 4.8:1 ✓
-  - Critical red `oklch(0.60 0.22 25)`: White text `oklch(0.98 0 0)` - Ratio 5.1:1 ✓
+  - Background Dark `oklch(0.25 0.01 280)`: Light Gray text `oklch(0.85 0.01 260)` - Ratio 11.2:1 ✓
+  - Card `oklch(0.30 0.015 275)`: Light Gray text `oklch(0.85 0.01 260)` - Ratio 9.8:1 ✓
+  - Accent Yellow `oklch(0.75 0.15 75)`: Dark text `oklch(0.20 0.02 280)` - Ratio 9.5:1 ✓
+  - Success Green `oklch(0.65 0.18 145)`: White text `oklch(0.98 0 0)` - Ratio 5.2:1 ✓
+  - Warning Yellow `oklch(0.70 0.17 60)`: Dark text `oklch(0.20 0.02 280)` - Ratio 10.1:1 ✓
 
 ## Font Selection
 
-Typography should communicate industrial precision and high readability in active work environments with varying light conditions and viewing distances.
+Typography should be highly legible in warehouse conditions with strong geometric clarity.
 
-- **Primary Typeface**: Space Grotesk - Technical, geometric, and highly legible; perfect for industrial applications
-- **Secondary Typeface**: JetBrains Mono - Used sparingly for equipment IDs and timestamps to create visual distinction
+- **Primary Font**: Space Grotesk - Modern geometric sans with excellent legibility at all sizes, perfect for industrial applications
+- **Monospace Font**: JetBrains Mono - Used for equipment IDs and technical data to create clear visual distinction
 
 - **Typographic Hierarchy**:
-  - H1 (Screen Titles): Space Grotesk Bold / 32px / -0.02em letter spacing / 1.2 line height
-  - H2 (Section Headers): Space Grotesk SemiBold / 24px / -0.01em letter spacing / 1.3 line height
-  - H3 (Card Titles): Space Grotesk Medium / 18px / normal letter spacing / 1.4 line height
-  - Body (Questions/Content): Space Grotesk Regular / 16px / normal letter spacing / 1.6 line height
-  - Small (Meta/Timestamps): Space Grotesk Regular / 14px / normal letter spacing / 1.5 line height
-  - Equipment IDs: JetBrains Mono Medium / 15px / normal letter spacing / 1.4 line height
+  - H1 (App Title): Space Grotesk Bold / 28px / tight tracking (-0.02em)
+  - H2 (Section Headers): Space Grotesk Semibold / 22px / normal tracking
+  - H3 (Equipment Names): Space Grotesk Medium / 18px / normal tracking
+  - Body (Questions, Descriptions): Space Grotesk Regular / 16px / relaxed line-height (1.6)
+  - Equipment IDs: JetBrains Mono Medium / 14px / monospace tracking
+  - Small (Meta info): Space Grotesk Regular / 14px / normal tracking
 
 ## Animations
 
-Animations reinforce the app's purpose-built efficiency—quick, precise, and confidence-inspiring. No decoration, only function.
+Animations should be purposeful and reinforce the sense of progression through the inspection process.
 
-- **Question transitions**: Subtle 200ms slide with slight fade when advancing through inspection questions—maintains spatial awareness
-- **Defect field reveal**: 250ms height expansion with ease-out when comment field appears—clear cause and effect
-- **Status changes**: 150ms color transitions on equipment status badges—immediate feedback without jarring shifts
-- **Button interactions**: 100ms scale (0.98) on press for tactile feedback—reinforces successful tap registration
-- **Dashboard updates**: Gentle 300ms fade-in when inspection data refreshes—professional and unobtrusive
+- **Answer selection**: Quick scale + color flash (150ms) to provide immediate tactile feedback
+- **Question transitions**: Smooth slide transition (300ms) to show forward progress
+- **Defect comment field**: Gentle slide-down expansion (250ms) when problem answer selected
+- **Status indicators**: Subtle pulse on critical defects (2s loop) to draw attention
+- **Page transitions**: Fade between operator/supervisor modes (200ms) for smooth context switching
 
 ## Component Selection
 
 - **Components**:
-  - **Card**: Equipment type selection, status cards, defect summaries—with custom border treatments for status colors
-  - **Button**: Primary actions (Yes/No, Submit, Start Inspection)—large variants (min 60px height) for easy tapping
-  - **Textarea**: Defect comment input—with character count and auto-focus on reveal
-  - **Badge**: Status indicators, category labels—color-coded with solid backgrounds for high contrast
-  - **Progress**: Visual indicator during multi-question inspection—reinforces completion progress
-  - **Tabs**: Switch between Operator/Supervisor/Maintenance modes—clear active state with accent underline
-  - **Table**: Inspection history and maintenance actions—with sortable columns and row highlighting
-  - **Select**: Equipment ID selection from existing fleet, maintenance status filters—with search/filter capability
-  - **Separator**: Visual breaks between dashboard sections—subtle with low opacity
-  - **Alert**: Warnings for duplicate inspections or old equipment—with appropriate status colors
-  - **Dialog**: Maintenance action details, resolution entry, assignment dialogs—modal overlays for focused workflows
-  - **Input**: Technician assignment, resolution notes—with proper focus states
-
+  - Tabs: Mode switching between Operator/Supervisor/Maintenance views
+  - Card: Equipment items, inspection summaries, dashboard widgets - elevated appearance with subtle borders
+  - Button: Answer buttons with random positioning, primary/secondary actions - large touch targets (min 56px height)
+  - Input + Textarea: Comment fields for defect reporting - clear focus states
+  - Badge: Status indicators (OK/Warning/Critical), CACES category labels
+  - Accordion: Collapsible inspection history details
+  - Dialog: Confirmation dialogs for duplicate inspections
+  - Progress: Visual indicator of quiz completion (question 3/8)
+  - Toast: Success/error notifications using Sonner
+  
 - **Customizations**:
-  - **Touch-optimized buttons**: Minimum 56px height with 12px vertical padding for gloved operation
-  - **Status cards**: Custom gradient borders using status colors for immediate visual differentiation
-  - **Question cards**: Large centered layout with oversized Yes/No buttons occupying 40% width each
-  - **Equipment grid**: Responsive CSS Grid with auto-fit columns, min 200px cards with hover lift effect
-
+  - Answer button container: Custom flex layout with random flex-direction and order properties
+  - Equipment cards: Large touch-friendly cards with CACES category color stripe
+  - Dashboard stats cards: Custom metric displays with large numbers and trend indicators
+  
 - **States**:
-  - **Buttons**: Default (solid primary), hover (brightness increase), active (scale 0.98), disabled (50% opacity with cursor-not-allowed)
-  - **Inputs**: Default (subtle border), focus (accent color ring with 3px width), error (red border with shake animation), filled (border color intensifies)
-  - **Equipment cards**: Default (neutral border), OK (green left border accent), Warning (orange left border), Critical (red left border with pulse)
-
+  - Buttons: Hover (slight scale 1.02), Active (scale 0.98), Disabled (reduced opacity), Selected (bold border + background shift)
+  - Inputs: Focus (accent ring + border color), Error (red ring), Success (green indicator)
+  - Cards: Hover (subtle elevation increase), Selected (accent border)
+  
 - **Icon Selection**:
-  - **Check** (circle check mark): Affirmative answers, successful inspections
-  - **X** (X circle): Negative answers, defects
-  - **Warning** (warning): Attention-needed states, alerts
-  - **ClipboardText**: Inspection actions, reports
-  - **Funnel**: Filter controls in dashboard
-  - **Calendar**: Date range selectors
-  - **Truck** (forklift representation): Equipment type indicators
-  - **ListChecks**: Inspection checklists
-  - **Eye**: View inspection details
-  - **Wrench**: Maintenance actions and repairs
-  - **Clock**: Pending maintenance status
-  - **Play**: Start/in-progress maintenance work
-  - **CheckCircle**: Completed maintenance actions
-
+  - Navigation: Tabs, List, ChartBar for mode switching
+  - Equipment: Forklift icon representation (custom or from Phosphor)
+  - Actions: CheckCircle (OK), Warning (minor issue), XCircle (critical)
+  - Add/Edit: Plus, Pencil, Trash
+  - Status: Circle, CircleDashed, CircleNotch for loading
+  
 - **Spacing**:
-  - Card padding: `p-6` (24px) for generous touch zones
-  - Section gaps: `gap-8` (32px) for clear visual separation
-  - Button spacing: `gap-4` (16px) between related actions
-  - Form field gaps: `gap-6` (24px) for clear question separation
-  - Grid gaps: `gap-6` (24px) in equipment grids
-
+  - Container padding: px-4 md:px-8 (consistent page margins)
+  - Card padding: p-6 (generous internal spacing)
+  - Stack gap: gap-4 for form elements, gap-6 for sections
+  - Grid gap: gap-4 for equipment grid, gap-6 for dashboard widgets
+  
 - **Mobile**:
-  - Single-column layout for inspection flow with full-width buttons
-  - Equipment selection cards stack vertically with 16px gaps
-  - Supervisor dashboard: tabs become full-width, table becomes scrollable cards on mobile
-  - Bottom-fixed action buttons for thumb-zone accessibility during inspections
-  - Reduce font sizes by 2px on screens < 640px while maintaining 44px minimum touch targets
+  - Equipment grid: Single column on mobile, 2-3 columns on tablet/desktop
+  - Answer buttons: Always stack vertically on mobile for thumb-friendly interaction
+  - Dashboard: Single column stat cards on mobile, grid layout on desktop
+  - Navigation tabs: Full-width on mobile, compact on desktop
+  - Question text: Larger font size on mobile (18px) for easy reading

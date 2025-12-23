@@ -1,67 +1,60 @@
-export type ForkliftType = 'CACES-1' | 'CACES-3' | 'CACES-5'
-
-export type InspectionStatus = 'ok' | 'minor' | 'critical'
-
-export type MaintenanceActionStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
+export type CACESCategory = 'CACES1' | 'CACES3' | 'CACES5'
 
 export interface Equipment {
   id: string
   name: string
-  type: ForkliftType
-}
-
-export interface AnswerChoice {
-  id: string
-  text: string
-  isCorrect: boolean
-  severity?: 'minor' | 'critical'
+  category: CACESCategory
 }
 
 export interface InspectionQuestion {
   id: string
   text: string
-  categories: ForkliftType[]
-  choices: AnswerChoice[]
+  category: CACESCategory | 'common'
+  answers: InspectionAnswer[]
+  correctAnswerId: string
 }
 
 export interface InspectionAnswer {
+  id: string
+  text: string
+  isOk: boolean
+  severity?: 'minor' | 'critical'
+}
+
+export interface QuestionResponse {
   questionId: string
   questionText: string
-  selectedChoiceId: string
-  selectedChoiceText: string
-  isCorrect: boolean
-  comment?: string
+  answerId: string
+  answerText: string
+  isOk: boolean
   severity?: 'minor' | 'critical'
+  comment?: string
+  timestamp: number
+}
+
+export type InspectionStatus = 'ok' | 'warning' | 'critical'
+
+export interface Inspection {
+  id: string
+  equipmentId: string
+  equipmentName: string
+  category: CACESCategory
+  operatorName: string
+  timestamp: number
+  responses: QuestionResponse[]
+  status: InspectionStatus
 }
 
 export interface MaintenanceAction {
   id: string
   inspectionId: string
+  equipmentId: string
+  equipmentName: string
   defectDescription: string
   severity: 'minor' | 'critical'
-  status: MaintenanceActionStatus
+  status: 'pending' | 'in-progress' | 'completed'
   createdAt: number
+  completedAt?: number
   assignedTo?: string
-  resolution?: string
-  resolvedAt?: number
-  resolvedBy?: string
-  equipmentType: ForkliftType
-  unitId: string
-}
-
-export interface Inspection {
-  id: string
-  equipmentType: ForkliftType
-  unitId: string
-  timestamp: number
-  operatorName: string
-  answers: InspectionAnswer[]
-  status: InspectionStatus
-}
-
-export interface EquipmentStatus {
-  unitId: string
-  type: ForkliftType
-  lastInspection?: Inspection
-  status: InspectionStatus
+  notes?: string
 }

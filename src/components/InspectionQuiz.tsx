@@ -1,240 +1,206 @@
-import { useState } from 'react'
-import { InspectionQuestion, InspectionAnswer, ForkliftType } from '@/lib/types'
-import { Card, CardContent } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { Equipment, InspectionQuestion, QuestionResponse } from '@/lib/types'
+import { shuffleAnswers } from '@/lib/questions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, Warning } from '@phosphor-icons/react'
+import { ArrowLeft, CheckCircle, Warning, XCircle } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-interface InspectionQuizProps {
+interface Props {
+  equipment: Equipment
   questions: InspectionQuestion[]
-  equipmentType: ForkliftType
-  unitId: string
-  onComplete: (answers: InspectionAnswer[]) => void
+  onComplete: (responses: QuestionResponse[]) => void
   onCancel: () => void
 }
 
-export function InspectionQuiz({
-  questions,
-  equipmentType,
-  unitId,
-  onComplete,
-  onCancel
-}: InspectionQuizProps) {
+export function InspectionQuiz({ equipment, questions, onComplete, onCancel }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState<InspectionAnswer[]>([])
-  const [showCommentField, setShowCommentField] = useState(false)
+  const [responses, setResponses] = useState<QuestionResponse[]>([])
+  const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
-  const [severity, setSeverity] = useState<'minor' | 'critical'>('minor')
+  const [showComment, setShowComment] = useState(false)
+  const [shuffledAnswers, setShuffledAnswers] = useState<InspectionQuestion['answers']>([])
+  const [answerLayout, setAnswerLayout] = useState<'vertical' | 'horizontal'>('vertical')
 
   const currentQuestion = questions[currentIndex]
-  const progress = ((currentIndex) / questions.length) * 100
+  const progress = ((currentIndex + 1) / questions.length) * 100
 
-  const handleAnswer = (answer: boolean) => {
-    if (answer) {
-      const newAnswer: InspectionAnswer = {
-        questionId: currentQuestion.id,
-        questionText: currentQuestion.text,
-        answer: true
-      }
-      setAnswers([...answers, newAnswer])
-      moveToNext()
-    } else {
-      setShowCommentField(true)
+  useEffect(() => {
+    if (currentQuestion) {
+      const shuffled = shuffleAnswers(currentQuestion.answers)
+      setShuffledAnswers(shuffled)
+      
+      const layoutChoice = shuffled.length <= 2 && Math.random() > 0.5 ? 'horizontal' : 'vertical'
+      setAnswerLayout(layoutChoice)
     }
-  }
+  }, [currentQuestion])
 
-  const handleSubmitDefect = () => {
-    if (comment.trim()) {
-      const newAnswer: InspectionAnswer = {
-        questionId: currentQuestion.id,
-        questionText: currentQuestion.text,
-        answer: false,
-        comment: comment.trim(),
-        severity
-      }
-      setAnswers([...answers, newAnswer])
+  const handleAnswerSelect = (answerId: string) => {
+    const answer = currentQuestion.answers.find(a => a.id === answerId)
+    if (!answer) return
+
+    setSelectedAnswerId(answerId)
+    
+    if (!answer.isOk) {
+      setShowComment(true)
+    } else {
+      setShowComment(false)
       setComment('')
-      setSeverity('minor')
-      setShowCommentField(false)
-      moveToNext()
     }
   }
 
-  const moveToNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      onComplete(answers)
-    }
-  }
+  const handleNext = () => {
+    if (!selectedAnswerId) return
 
-  const handleSkipComment = () => {
-    const newAnswer: InspectionAnswer = {
+    const answer = currentQuestion.answers.find(a => a.id === selectedAnswerId)
+    if (!answer) return
+
+    const response: QuestionResponse = {
       questionId: currentQuestion.id,
       questionText: currentQuestion.text,
-      answer: false,
-      severity: 'minor'
+      answerId: selectedAnswerId,
+      answerText: answer.text,
+      isOk: answer.isOk,
+      severity: answer.severity,
+      comment: !answer.isOk && comment ? comment : undefined,
+      timestamp: Date.now()
     }
-    setAnswers([...answers, newAnswer])
-    setComment('')
-    setShowCommentField(false)
-    moveToNext()
+
+    const newResponses = [...responses, response]
+    setResponses(newResponses)
+
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+      setSelectedAnswerId(null)
+      setComment('')
+      setShowComment(false)
+    } else {
+      onComplete(newResponses)
+    }
   }
 
+  const getAnswerButtonVariant = (answerId: string) => {
+    if (selectedAnswerId === answerId) {
+      const answer = currentQuestion.answers.find(a => a.id === answerId)
+      if (answer?.isOk) return 'default'
+      return answer?.severity === 'critical' ? 'destructive' : 'secondary'
+    }
+    return 'outline'
+  }
+
+  const getAnswerIcon = (answerId: string) => {
+    if (selectedAnswerId !== answerId) return null
+    
+    const answer = currentQuestion.answers.find(a => a.id === answerId)
+    if (answer?.isOk) return <CheckCircle weight="fill" />
+    if (answer?.severity === 'critical') return <XCircle weight="fill" />
+    return <Warning weight="fill" />
+  }
+
+  if (!currentQuestion) return null
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border p-4 space-y-4 z-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono">
-                {unitId}
-              </Badge>
-              <Badge variant="secondary">{equipmentType}</Badge>
-            </div>
-          </div>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
+    <div className="min-h-screen bg-background p-4 md:p-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            <ArrowLeft className="mr-2" />
+            Retour
           </Button>
         </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              Question {currentIndex + 1} of {questions.length}
-            </span>
-            <span className="font-semibold">{Math.round(progress)}%</span>
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-sm font-medium text-muted-foreground">
+                {equipment.name}
+              </h2>
+              <p className="text-xs font-mono text-muted-foreground">{equipment.id}</p>
+            </div>
+            <div className="text-sm font-medium">
+              Question {currentIndex + 1} / {questions.length}
+            </div>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-      </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card className="border-2">
-                <CardContent className="p-8 md:p-12 space-y-8">
-                  <h2 className="text-2xl md:text-3xl font-semibold leading-tight text-center">
-                    {currentQuestion.text}
-                  </h2>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-6 md:p-8 mb-6">
+              <h3 className="text-xl md:text-2xl font-semibold mb-8">
+                {currentQuestion.text}
+              </h3>
 
-                  {!showCommentField ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button
-                        size="lg"
-                        onClick={() => handleAnswer(true)}
-                        className="h-20 md:h-24 text-xl font-semibold bg-success hover:bg-success/90 text-success-foreground flex flex-col gap-2"
-                      >
-                        <CheckCircle size={32} weight="fill" />
-                        Yes
-                      </Button>
-                      <Button
-                        size="lg"
-                        onClick={() => handleAnswer(false)}
-                        className="h-20 md:h-24 text-xl font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground flex flex-col gap-2"
-                      >
-                        <XCircle size={32} weight="fill" />
-                        No
-                      </Button>
+              <div 
+                className={`grid gap-3 ${
+                  answerLayout === 'horizontal' && shuffledAnswers.length === 2
+                    ? 'grid-cols-2'
+                    : 'grid-cols-1'
+                }`}
+              >
+                {shuffledAnswers.map((answer) => (
+                  <Button
+                    key={answer.id}
+                    variant={getAnswerButtonVariant(answer.id)}
+                    size="lg"
+                    onClick={() => handleAnswerSelect(answer.id)}
+                    className="h-auto min-h-[56px] py-4 px-6 text-left justify-start relative"
+                  >
+                    <span className="flex-1">{answer.text}</span>
+                    {getAnswerIcon(answer.id) && (
+                      <span className="ml-3">{getAnswerIcon(answer.id)}</span>
+                    )}
+                  </Button>
+                ))}
+              </div>
+
+              <AnimatePresence>
+                {showComment && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-6">
+                      <label htmlFor="defect-comment" className="block text-sm font-medium mb-2">
+                        Décrivez le défaut observé
+                      </label>
+                      <Textarea
+                        id="defect-comment"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Détails du problème constaté..."
+                        rows={3}
+                        className="resize-none"
+                      />
                     </div>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      transition={{ duration: 0.25, ease: 'easeOut' }}
-                      className="space-y-4"
-                    >
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Describe the issue
-                        </label>
-                        <Textarea
-                          id="defect-comment"
-                          placeholder="Enter details about what's wrong..."
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                          className="min-h-32 text-base"
-                          autoFocus
-                        />
-                        <div className="text-xs text-muted-foreground text-right">
-                          {comment.length} characters
-                        </div>
-                      </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Severity</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setSeverity('minor')}
-                            className={`p-4 rounded-lg border-2 transition-all ${
-                              severity === 'minor'
-                                ? 'border-warning bg-warning/10'
-                                : 'border-border hover:border-warning/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Warning
-                                size={20}
-                                weight="fill"
-                                className="text-warning"
-                              />
-                              <span className="font-medium">Minor Issue</span>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSeverity('critical')}
-                            className={`p-4 rounded-lg border-2 transition-all ${
-                              severity === 'critical'
-                                ? 'border-destructive bg-destructive/10'
-                                : 'border-border hover:border-destructive/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <XCircle
-                                size={20}
-                                weight="fill"
-                                className="text-destructive"
-                              />
-                              <span className="font-medium">Critical</span>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 pt-2">
-                        <Button
-                          variant="outline"
-                          onClick={handleSkipComment}
-                          className="flex-1"
-                        >
-                          Skip Comment
-                        </Button>
-                        <Button
-                          onClick={handleSubmitDefect}
-                          disabled={!comment.trim()}
-                          className="flex-1"
-                        >
-                          Continue
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            <div className="flex justify-end">
+              <Button
+                size="lg"
+                onClick={handleNext}
+                disabled={!selectedAnswerId}
+                className="min-w-[160px]"
+              >
+                {currentIndex < questions.length - 1 ? 'Suivant' : 'Terminer'}
+              </Button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )
