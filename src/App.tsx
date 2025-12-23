@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Inspection, ForkliftType, InspectionAnswer, InspectionStatus } from '@/lib/types'
+import { Inspection, ForkliftType, InspectionAnswer, InspectionStatus, MaintenanceAction } from '@/lib/types'
 import { getRandomQuestions } from '@/lib/questions'
 import { EquipmentSelector } from '@/components/EquipmentSelector'
 import { InspectionQuiz } from '@/components/InspectionQuiz'
 import { InspectionSummary } from '@/components/InspectionSummary'
 import { SupervisorDashboard } from '@/components/SupervisorDashboard'
+import { MaintenanceActions } from '@/components/MaintenanceActions'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
@@ -14,6 +15,7 @@ type AppScreen = 'selection' | 'quiz' | 'summary'
 
 function App() {
   const [inspections, setInspections] = useKV<Inspection[]>('inspections', [])
+  const [maintenanceActions, setMaintenanceActions] = useKV<MaintenanceAction[]>('maintenance-actions', [])
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('selection')
   const [currentEquipment, setCurrentEquipment] = useState<{
     type: ForkliftType
@@ -21,9 +23,10 @@ function App() {
   } | null>(null)
   const [currentQuestions, setCurrentQuestions] = useState<any[]>([])
   const [completedInspection, setCompletedInspection] = useState<Inspection | null>(null)
-  const [mode, setMode] = useState<'operator' | 'supervisor'>('operator')
+  const [mode, setMode] = useState<'operator' | 'supervisor' | 'maintenance'>('operator')
 
   const allInspections = inspections || []
+  const allMaintenanceActions = maintenanceActions || []
 
   const handleEquipmentSelect = (type: ForkliftType, unitId: string) => {
     const today = new Date()
@@ -77,6 +80,23 @@ function App() {
     }
 
     setInspections(current => [inspection, ...(current || [])])
+    
+    const defects = answers.filter(a => !a.answer)
+    if (defects.length > 0) {
+      const newActions: MaintenanceAction[] = defects.map(defect => ({
+        id: `MA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        inspectionId: inspection.id,
+        defectDescription: `${defect.questionText}${defect.comment ? `: ${defect.comment}` : ''}`,
+        severity: defect.severity || 'minor',
+        status: 'pending',
+        createdAt: Date.now(),
+        equipmentType: currentEquipment.type,
+        unitId: currentEquipment.unitId
+      }))
+      
+      setMaintenanceActions(current => [...newActions, ...(current || [])])
+    }
+    
     setCompletedInspection(inspection)
     setCurrentScreen('summary')
 
@@ -100,10 +120,18 @@ function App() {
     setCompletedInspection(null)
   }
 
+  const handleUpdateMaintenanceAction = (actionId: string, updates: Partial<MaintenanceAction>) => {
+    setMaintenanceActions(current => 
+      (current || []).map(action =>
+        action.id === actionId ? { ...action, ...updates } : action
+      )
+    )
+  }
+
   return (
     <>
       <div className="min-h-screen bg-background text-foreground">
-        <Tabs value={mode} onValueChange={(v) => setMode(v as 'operator' | 'supervisor')}>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as 'operator' | 'supervisor' | 'maintenance')}>
           <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-50">
             <div className="container mx-auto px-4">
               <div className="flex items-center justify-between py-4">
@@ -116,6 +144,7 @@ function App() {
                 <TabsList>
                   <TabsTrigger value="operator">Operator</TabsTrigger>
                   <TabsTrigger value="supervisor">Supervisor</TabsTrigger>
+                  <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
                 </TabsList>
               </div>
             </div>
@@ -146,6 +175,17 @@ function App() {
 
           <TabsContent value="supervisor" className="mt-0">
             <SupervisorDashboard inspections={allInspections} />
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="mt-0">
+            <div className="min-h-screen bg-background p-4 md:p-8">
+              <div className="max-w-7xl mx-auto">
+                <MaintenanceActions
+                  actions={allMaintenanceActions}
+                  onUpdateAction={handleUpdateMaintenanceAction}
+                />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

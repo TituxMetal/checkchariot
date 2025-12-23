@@ -47,14 +47,31 @@ This is a focused workflow application with distinct operator and supervisor mod
 - **Progression**: Grid layout → Equipment cards show ID, type, last inspection time, status → Click card to view inspection details and defect history
 - **Success criteria**: Status accurately reflects latest inspection; green (all OK), orange (minor issues), red (critical defects); timestamp shows hours since last check
 
+### Maintenance Action Tracking
+- **Functionality**: Automatic creation of maintenance actions from inspection defects with status tracking (pending, in-progress, completed, cancelled)
+- **Purpose**: Close the loop between defect identification and resolution; ensure all issues are tracked to completion
+- **Trigger**: Created automatically when inspection contains defects; supervisors manage from dedicated Maintenance tab
+- **Progression**: Defect reported → Maintenance action created (pending) → Supervisor assigns to technician and starts work (in-progress) → Technician completes with resolution notes (completed)
+- **Success criteria**: Each defect generates a trackable action; supervisors can filter by status; resolution notes are required for completion; critical issues are visually prioritized
+
+### Resolution Status Management
+- **Functionality**: Supervisors and maintenance staff can update action status, assign work, and document resolutions
+- **Purpose**: Enable accountability and tracking of maintenance work completion
+- **Trigger**: Supervisor clicks on maintenance action in Maintenance tab
+- **Progression**: View pending action → Assign to technician and start → Work in progress → Complete with resolution notes → Resolution logged with timestamp and user
+- **Success criteria**: Status changes persist; resolution notes include what was done; completed actions show who resolved and when; can view resolution history
+
 ## Edge Case Handling
 
 - **No Inspections Yet**: Dashboard shows empty state with helpful prompt to start first inspection
+- **No Maintenance Actions**: Maintenance tab shows empty state when no defects have been reported
 - **Incomplete Inspection**: "Save as Draft" option if operator needs to pause mid-inspection; draft accessible from landing page
 - **Duplicate Inspection**: Warn if same equipment was already inspected today; allow override with reason
 - **Missing Unit ID**: Validation prevents proceeding without valid equipment identifier
 - **Network Issues**: Inspections save to local storage and sync when connection restored
 - **Very Old Equipment**: Show warning if equipment hasn't been inspected in 48+ hours
+- **Completing Without Resolution Notes**: Prevent completing maintenance actions without resolution description
+- **Critical Items in Pending State**: Visually prioritize critical severity items in maintenance queue
 
 ## Design Direction
 
@@ -113,11 +130,13 @@ Animations reinforce the app's purpose-built efficiency—quick, precise, and co
   - **Textarea**: Defect comment input—with character count and auto-focus on reveal
   - **Badge**: Status indicators, category labels—color-coded with solid backgrounds for high contrast
   - **Progress**: Visual indicator during multi-question inspection—reinforces completion progress
-  - **Tabs**: Switch between Operator/Supervisor modes—clear active state with accent underline
-  - **Table**: Inspection history in supervisor dashboard—with sortable columns and row highlighting
-  - **Select**: Equipment ID selection from existing fleet—with search/filter capability
+  - **Tabs**: Switch between Operator/Supervisor/Maintenance modes—clear active state with accent underline
+  - **Table**: Inspection history and maintenance actions—with sortable columns and row highlighting
+  - **Select**: Equipment ID selection from existing fleet, maintenance status filters—with search/filter capability
   - **Separator**: Visual breaks between dashboard sections—subtle with low opacity
   - **Alert**: Warnings for duplicate inspections or old equipment—with appropriate status colors
+  - **Dialog**: Maintenance action details, resolution entry, assignment dialogs—modal overlays for focused workflows
+  - **Input**: Technician assignment, resolution notes—with proper focus states
 
 - **Customizations**:
   - **Touch-optimized buttons**: Minimum 56px height with 12px vertical padding for gloved operation
@@ -140,6 +159,10 @@ Animations reinforce the app's purpose-built efficiency—quick, precise, and co
   - **Truck** (forklift representation): Equipment type indicators
   - **ListChecks**: Inspection checklists
   - **Eye**: View inspection details
+  - **Wrench**: Maintenance actions and repairs
+  - **Clock**: Pending maintenance status
+  - **Play**: Start/in-progress maintenance work
+  - **CheckCircle**: Completed maintenance actions
 
 - **Spacing**:
   - Card padding: `p-6` (24px) for generous touch zones

@@ -1,7 +1,15 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Inspection, EquipmentStatus, InspectionStatus } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -16,7 +24,8 @@ import {
   Warning,
   XCircle,
   Truck,
-  Calendar
+  Calendar,
+  Eye
 } from '@phosphor-icons/react'
 
 interface SupervisorDashboardProps {
@@ -24,6 +33,8 @@ interface SupervisorDashboardProps {
 }
 
 export function SupervisorDashboard({ inspections }: SupervisorDashboardProps) {
+  const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null)
+  
   const stats = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -265,10 +276,104 @@ export function SupervisorDashboard({ inspections }: SupervisorDashboardProps) {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {defectCount > 0 && (
-                              <span className={getStatusColor(inspection.status)}>
-                                {defectCount}
-                              </span>
+                            {defectCount > 0 ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setSelectedInspection(inspection)}
+                                  >
+                                    <Eye size={16} className="mr-1" />
+                                    <span className={getStatusColor(inspection.status)}>
+                                      {defectCount}
+                                    </span>
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Inspection Details - {inspection.unitId}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <div className="text-muted-foreground mb-1">Equipment Type</div>
+                                        <Badge variant="secondary">{inspection.equipmentType}</Badge>
+                                      </div>
+                                      <div>
+                                        <div className="text-muted-foreground mb-1">Operator</div>
+                                        <div>{inspection.operatorName}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-muted-foreground mb-1">Timestamp</div>
+                                        <div>
+                                          {new Date(inspection.timestamp).toLocaleString('en-US', {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                          })}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-muted-foreground mb-1">Status</div>
+                                        <Badge
+                                          variant={inspection.status === 'ok' ? 'outline' : 'destructive'}
+                                          className={`${
+                                            inspection.status === 'ok'
+                                              ? 'border-success text-success'
+                                              : inspection.status === 'minor'
+                                              ? 'bg-warning text-warning-foreground'
+                                              : ''
+                                          }`}
+                                        >
+                                          {inspection.status === 'ok'
+                                            ? 'OK'
+                                            : inspection.status === 'critical'
+                                            ? 'Critical'
+                                            : 'Minor Issues'}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <h4 className="font-semibold">Defects Found</h4>
+                                      <div className="space-y-2">
+                                        {inspection.answers
+                                          .filter(a => !a.answer)
+                                          .map((defect, idx) => (
+                                            <div
+                                              key={idx}
+                                              className={`p-3 rounded-lg border-l-4 ${
+                                                defect.severity === 'critical'
+                                                  ? 'border-l-destructive bg-destructive/5'
+                                                  : 'border-l-warning bg-warning/5'
+                                              }`}
+                                            >
+                                              <div className="flex items-start justify-between gap-2 mb-1">
+                                                <div className="text-sm font-medium flex-1">
+                                                  {defect.questionText}
+                                                </div>
+                                                <Badge
+                                                  variant={defect.severity === 'critical' ? 'destructive' : 'outline'}
+                                                  className={`text-xs ${
+                                                    defect.severity === 'minor' ? 'border-warning text-warning' : ''
+                                                  }`}
+                                                >
+                                                  {defect.severity === 'critical' ? 'Critical' : 'Minor'}
+                                                </Badge>
+                                              </div>
+                                              {defect.comment && (
+                                                <div className="text-sm text-muted-foreground">
+                                                  {defect.comment}
+                                                </div>
+                                              )}
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
                         </TableRow>

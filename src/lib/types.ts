@@ -2,6 +2,8 @@ export type ForkliftType = 'CACES-1' | 'CACES-3' | 'CACES-5'
 
 export type InspectionStatus = 'ok' | 'minor' | 'critical'
 
+export type MaintenanceActionStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled'
+
 export interface InspectionQuestion {
   id: string
   text: string
@@ -14,6 +16,21 @@ export interface InspectionAnswer {
   answer: boolean
   comment?: string
   severity?: 'minor' | 'critical'
+}
+
+export interface MaintenanceAction {
+  id: string
+  inspectionId: string
+  defectDescription: string
+  severity: 'minor' | 'critical'
+  status: MaintenanceActionStatus
+  createdAt: number
+  assignedTo?: string
+  resolution?: string
+  resolvedAt?: number
+  resolvedBy?: string
+  equipmentType: ForkliftType
+  unitId: string
 }
 
 export interface Inspection {
